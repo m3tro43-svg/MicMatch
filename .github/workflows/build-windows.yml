@@ -1,0 +1,37 @@
+name: Build MicMatch VST3
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-windows:
+    runs-on: windows-2022
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -A x64
+
+      - name: Build VST3
+        run: cmake --build build --config Release --target MicMatch_VST3
+
+      - name: Package VST3
+        shell: pwsh
+        run: |
+          $plugin = Get-ChildItem -Path build -Directory -Recurse -Filter "MicMatch.vst3" | Select-Object -First 1
+          if (-not $plugin) {
+            Write-Error "MicMatch.vst3 bundle was not produced."
+            exit 1
+          }
+          Compress-Archive -Path $plugin.FullName -DestinationPath "$PWD/MicMatch-Windows-VST3.zip" -Force
+
+      - name: Upload VST3 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MicMatch-Windows-VST3
+          path: MicMatch-Windows-VST3.zip
+          if-no-files-found: error
+          retention-days: 30
