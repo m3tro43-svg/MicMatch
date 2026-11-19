@@ -16,6 +16,8 @@ juce_add_plugin(MicMatch
     FORMATS VST3 Standalone
     PRODUCT_NAME "MicMatch")
 
+juce_generate_juce_header(MicMatch)
+
 target_sources(MicMatch PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginProcessor.h
