@@ -10,7 +10,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout MicMatchAudioProcessor::crea
 {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
     layout.add (std::make_unique<juce::AudioParameterFloat>("mix", "Mix",
-        juce::NormalisableRange<float>(0.0f, 1.0f, 0.001f), 1.0f));
+        juce::NormalisableRange<float>(0.0f, 100.0f, 0.1f), 100.0f));
     layout.add (std::make_unique<juce::AudioParameterChoice>("preset", "Mic Character",
         juce::StringArray { "A - U87", "B - TLM 102", "C - C800G", "D - C414" }, 0));
     return layout;
@@ -30,7 +30,7 @@ void MicMatchAudioProcessor::prepareToPlay (double sampleRate, int)
     for (auto* bank : { &leftFilters, &rightFilters })
         for (auto& f : *bank) f.prepare (spec);
     mixSmoother.reset (sampleRate, 0.025);
-    mixSmoother.setCurrentAndTargetValue (*parameters.getRawParameterValue("mix"));
+    mixSmoother.setCurrentAndTargetValue (*parameters.getRawParameterValue("mix") * 0.01f);
     lastPreset = -1;
     updateFilters ((int) *parameters.getRawParameterValue("preset"));
 }
@@ -39,10 +39,10 @@ void MicMatchAudioProcessor::updateFilters (int p)
 {
     struct Voice { float low, body, presence, air, centre; };
     static constexpr Voice voices[] = {
-        { -0.7f, -1.1f, 0.5f, 0.7f, 5200.0f },
-        { -1.0f, -1.5f, 1.7f, 1.4f, 6500.0f },
-        { -1.2f, -0.8f, 2.0f, 2.0f, 9000.0f },
-        { -0.4f, -1.8f, 0.9f, 0.2f, 4800.0f }
+        { -1.0f, -1.8f, 1.2f, 1.5f, 5200.0f },
+        { -1.5f, -2.2f, 3.0f, 2.4f, 6500.0f },
+        { -1.8f, -1.2f, 3.4f, 3.2f, 9000.0f },
+        { -0.6f, -2.5f, 1.8f, 0.8f, 4800.0f }
     };
     p = juce::jlimit (0, 3, p);
     const auto v = voices[p];
@@ -66,7 +66,7 @@ void MicMatchAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     juce::ScopedNoDenormals noDenormals;
     const int preset = (int) *parameters.getRawParameterValue("preset");
     if (preset != lastPreset) updateFilters (preset);
-    mixSmoother.setTargetValue (*parameters.getRawParameterValue("mix"));
+    mixSmoother.setTargetValue (*parameters.getRawParameterValue("mix") * 0.01f);
     const int channels = buffer.getNumChannels();
     const int samples = buffer.getNumSamples();
     for (int n = 0; n < samples; ++n)
